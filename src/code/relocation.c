@@ -1,6 +1,6 @@
 #include "global.h"
 
-void Overlay_Relocate_Old(void* allocatedVRamAddress, OverlayRelocationSection* overlayInfo, void* vRamAddress) {
+void Overlay_Relocate_OOT(u32 vromAddr, void* allocatedVRamAddress, OverlayRelocationSection* overlayInfo, void* vRamAddress) {
     u32 sections[4];
     u32 relocatedValue;
     u32 dbg;
@@ -183,9 +183,12 @@ void Overlay_Relocate(u32 vromStart, u32 allocatedVRamAddr, OverlayRelocationSec
             }
             *inst = *inst & 0xffff0000 | relocatedAddress & 0xffff;
             if (vromStart == (u32)_ovl_En_Heishi4SegmentRomStart) {
-                Zelda_Printf("LO16 RELOC: %08X %08X %08X %08X %08X %08X\n", signedOffset, allocatedVRamAddr, vRamStart, lastInst, relocatedAddress, *inst);
+                Zelda_Printf("LO16 RELOC: %08X %08X %08X %08X %08X %08X %08X\n", (u32)inst, *inst, relocatedAddress, signedOffset, allocatedVRamAddr, vRamStart, lastInst);
             }
             break;
         }
+    }
+    if (vromStart == (u32)_ovl_En_Heishi4SegmentRomStart) {
+        Zelda_Printf("Finished all relocations...\n");
     }
 }
