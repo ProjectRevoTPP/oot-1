@@ -12,7 +12,7 @@ void isPrintfInit(void) {
     osEPiWriteIo(sISVHandle, (u32)&gISVDbgPrnAdrs->magic, ASCII_TO_U32('I', 'S', '6', '4'));
 }
 
-void osSyncPrintfUnused(const char* fmt, ...) {
+void Zelda_Printf(const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
 
@@ -20,10 +20,7 @@ void osSyncPrintfUnused(const char* fmt, ...) {
 }
 
 void osSyncPrintf(const char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-
-    _Printf(is_proutSyncPrintf, NULL, fmt, args);
+    // Stubbed to filter output.
 }
 
 // assumption

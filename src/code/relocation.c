@@ -26,8 +26,8 @@ void Overlay_Relocate_Old(void* allocatedVRamAddress, OverlayRelocationSection* 
     relocatedAddress = 0;
 
     if (gOverlayLogSeverity >= 3) {
-        osSyncPrintf("DoRelocation(%08x, %08x, %08x)\n", allocatedVRamAddress, overlayInfo, vRamAddress);
-        osSyncPrintf("text=%08x, data=%08x, rodata=%08x, bss=%08x\n", overlayInfo->textSize, overlayInfo->dataSize,
+        Zelda_Printf("DoRelocation(%08x, %08x, %08x)\n", allocatedVRamAddress, overlayInfo, vRamAddress);
+        Zelda_Printf("text=%08x, data=%08x, rodata=%08x, bss=%08x\n", overlayInfo->textSize, overlayInfo->dataSize,
                      overlayInfo->rodataSize, overlayInfo->bssSize);
     }
 
@@ -77,9 +77,10 @@ void Overlay_Relocate_Old(void* allocatedVRamAddress, OverlayRelocationSection* 
                 luiVals[(*relocDataP >> 0x10) & 0x1F] = *relocDataP;
                 if(reloc == 0x45000194) // this is cheesy as hell but w/e
                 {
-                    osSyncPrintf("ID1: %d\n", (*relocDataP >> 0x10) & 0x1F);
-                    osSyncPrintf("REL DEBUG: %08x, %08x, %08x\n", reloc, relocDataP, relocData);
+                    Zelda_Printf("ID1: %d\n", (*relocDataP >> 0x10) & 0x1F);
+                    Zelda_Printf("REL DEBUG: %08x, %08x, %08x\n", reloc, relocDataP, relocData);
                 }
+                Zelda_Printf("HI16 RELOC: %d\n", (*relocDataP >> 0x10) & 0x1F);
                 break;
             case 0x6000000:
                 /* R_MIPS_LO16
@@ -92,13 +93,13 @@ void Overlay_Relocate_Old(void* allocatedVRamAddress, OverlayRelocationSection* 
                 vaddr = (*regValP << 0x10) + (s16)*relocDataP;
                 luiInstRef = luiRefs[((*relocDataP >> 0x15) & 0x1F)];
                 if(reloc == 0x460001A4 || reloc == 0x460001F4) {
-                    osSyncPrintf("ID2: %d\n", (*relocDataP >> 0x10) & 0x1F);
-                    osSyncPrintf("REG1: (%08x) = (*%08x [%08x] << 0x10) + (s16)*%08x [%08x]\n", vaddr, regValP, *regValP, relocDataP, *relocDataP);
+                    Zelda_Printf("ID2: %d\n", (*relocDataP >> 0x10) & 0x1F);
+                    Zelda_Printf("REG1: (%08x) = (*%08x [%08x] << 0x10) + (s16)*%08x [%08x]\n", vaddr, regValP, *regValP, relocDataP, *relocDataP);
                 }
                 if ((vaddr & 0xF000000) == 0) {
                     relocOffset = vaddr - (u32)vRamAddress;
                     if(reloc == 0x460001A4 || reloc == 0x460001F4) {
-                        osSyncPrintf("REG2: %08x - %08x = %08x\n", vaddr, (u32)vRamAddress, relocOffset);
+                        Zelda_Printf("REG2: %08x - %08x = %08x\n", vaddr, (u32)vRamAddress, relocOffset);
                     }
                     vaddr = (s16)relocData;
                     isLoNeg = (((relocOffset + allocu32) & 0x8000) ? 1 : 0);
@@ -110,9 +111,10 @@ void Overlay_Relocate_Old(void* allocatedVRamAddress, OverlayRelocationSection* 
                     relocatedAddress = (*luiInstRef << 0x10) + (s16)relocatedValue;
                     *relocDataP = relocatedValue;
                     if(reloc == 0x460001A4 || reloc == 0x460001F4) {
-                        osSyncPrintf("REG3: %08x, %08x, %08x, %08x\n", unrelocatedAddress, *luiInstRef, relocatedValue, relocatedAddress);
+                        Zelda_Printf("REG3: %08x, %08x, %08x, %08x\n", unrelocatedAddress, *luiInstRef, relocatedValue, relocatedAddress);
                     }
                 }
+                Zelda_Printf("LO16 RELOC: %d\n", (*relocDataP >> 0x10) & 0x1F);
                 break;
         }
 
@@ -124,8 +126,8 @@ void Overlay_Relocate_Old(void* allocatedVRamAddress, OverlayRelocationSection* 
                 dbg += 0xA;
             case 0x6000000:
                 if (gOverlayLogSeverity >= 3) {
-                    osSyncPrintf("%02d %08x %08x %08x ", dbg, relocDataP, relocatedValue, relocatedAddress);
-                    osSyncPrintf(" %08x %08x %08x %08x\n", ((u32)relocDataP + (u32)vRamAddress) - allocu32, relocData,
+                    Zelda_Printf("%02d %08x %08x %08x ", dbg, relocDataP, relocatedValue, relocatedAddress);
+                    Zelda_Printf(" %08x %08x %08x %08x\n", ((u32)relocDataP + (u32)vRamAddress) - allocu32, relocData,
                                  unrelocatedAddress, relocOffset);
                 }
         }
@@ -133,7 +135,7 @@ void Overlay_Relocate_Old(void* allocatedVRamAddress, OverlayRelocationSection* 
 }
 
 // This needs lots of work. Mostly regalloc and getting the address of D_80096C30 placed in s5 at the beginning of the function
-void Overlay_Relocate(u32 allocatedVRamAddr, OverlayRelocationSection* overlayInfo, u32 vRamStart) {
+void Overlay_Relocate(u32 vromStart, u32 allocatedVRamAddr, OverlayRelocationSection* overlayInfo, u32 vRamStart) {
     s32 sectionLocations [4];
     u32 lastHiAddr;
     u32 lastHiAddend;
@@ -165,6 +167,9 @@ void Overlay_Relocate(u32 allocatedVRamAddr, OverlayRelocationSection* overlayIn
         case 0x5000000:
             lastHiAddr = (u32)inst;
             lastHiAddend = *inst;
+            if (vromStart == (u32)_ovl_En_Heishi4SegmentRomStart) {
+                Zelda_Printf("HI16 RELOC: %08X %08X\n", (u32)inst, *inst);
+            }
             break;
         case 0x6000000:
             signedOffset = (s16)*inst;
@@ -177,6 +182,9 @@ void Overlay_Relocate(u32 allocatedVRamAddr, OverlayRelocationSection* overlayIn
                 lastHiAddr = 0;
             }
             *inst = *inst & 0xffff0000 | relocatedAddress & 0xffff;
+            if (vromStart == (u32)_ovl_En_Heishi4SegmentRomStart) {
+                Zelda_Printf("LO16 RELOC: %08X %08X %08X %08X %08X %08X\n", signedOffset, allocatedVRamAddr, vRamStart, lastInst, relocatedAddress, *inst);
+            }
             break;
         }
     }

@@ -83,7 +83,7 @@ s32 Overlay_Load(u32 vRomStart, u32 vRomEnd, void* vRamStart, void* vRamEnd, voi
         osSyncPrintf("リロケーションします\n");
     }
 
-    Overlay_Relocate(allocatedVRamAddr, ovl, vRamStart);
+    Overlay_Relocate(vRomStart, allocatedVRamAddr, ovl, vRamStart);
 
     bssSize = ovl->bssSize;
     if (bssSize != 0) {

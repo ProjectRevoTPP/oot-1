@@ -2374,7 +2374,7 @@ void func_800FBFD8(void);
 void* Overlay_AllocateAndLoad(u32 vRomStart, u32 vRomEnd, void* vRamStart, void* vRamEnd);
 void MtxConv_F2L(MatrixInternal* m1, MtxF* m2);
 void MtxConv_L2F(MtxF* m1, MatrixInternal* m2);
-void Overlay_Relocate(u32 allocatedVRamAddr, OverlayRelocationSection* overlayInfo, u32 vRamStart);
+void Overlay_Relocate(u32 vromStart, u32 allocatedVRamAddr, OverlayRelocationSection* overlayInfo, u32 vRamStart);
 s32 Overlay_Load(u32 vRomStart, u32 vRomEnd, void* vRamStart, void* vRamEnd, void* allocatedVRamAddress);
 // ? func_800FC800(?);
 // ? func_800FC83C(?);
