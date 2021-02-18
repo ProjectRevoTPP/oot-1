@@ -10,7 +10,7 @@ glabel func_800EDA3C
 /* B64BFC 800EDA5C 952E0000 */  lhu   $t6, ($t1)
 /* B64C00 800EDA60 3C038013 */  lui   $v1, %hi(D_80130F40) # $v1, 0x8013
 /* B64C04 800EDA64 24630F40 */  addiu $v1, %lo(D_80130F40) # addiu $v1, $v1, 0xf40
-/* B64C08 800EDA68 15C00003 */  bnez  $t6, .L800EDA78
+/* B64C08 800EDA68 15C00003 */  nop # bnez  $t6, .L800EDA78 (TAS sync patch)
 /* B64C0C 800EDA6C 3C0F8017 */   lui   $t7, %hi(D_8016BA04) # $t7, 0x8017
 /* B64C10 800EDA70 10000005 */  b     .L800EDA88
 /* B64C14 800EDA74 24040003 */   li    $a0, 3

@@ -1,0 +1,164 @@
+diff --git a/include/functions.h b/include/functions.h
+index f44cc1916..538fa22b0 100644
+--- a/include/functions.h
++++ b/include/functions.h
+@@ -968,7 +968,7 @@ void func_80075E68(GlobalContext* globalCtx);
+ // ? func_800763A8(?);
+ // ? func_800766C4(?);
+ void func_8007672C(GraphicsContext*, u8, u8, u8, u8, UNK_TYPE);
+-void func_80076934(GlobalContext* globalCtx);
++void func_80076934(GlobalContext* globalCtx, u8 var);
+ void func_800773A8(GlobalContext* globalCtx, f32 arg1, f32 arg2, f32 arg3, f32 arg4);
+ s32 func_800775CC();
+ void func_800775D8();
+diff --git a/src/boot/z_std_dma.c b/src/boot/z_std_dma.c
+index d03ac8d7a..fac2e379b 100644
+--- a/src/boot/z_std_dma.c
++++ b/src/boot/z_std_dma.c
+@@ -1729,18 +1729,25 @@ void DmaMgr_Error(DmaRequest* req, const char* file, const char* errorName, cons
+     Fault_AddHungupAndCrashImpl(buff1, buff2);
+ }
+ 
++extern int gNewlyLoadedOvlID;
++
+ const char* DmaMgr_GetFileNameImpl(u32 vrom) {
+     DmaEntry* iter = gDmaDataTable;
+     const char** name = sDmaMgrFileNames;
++    int i = 0;
+ 
+     while (iter->vromEnd) {
+         if (vrom >= iter->vromStart && vrom < iter->vromEnd) {
++            if(i > 28) // HUH??
++                gNewlyLoadedOvlID = i;
+             return *name;
+         }
+ 
+         iter++;
+         name++;
++        i++;
+     }
++    gNewlyLoadedOvlID = -1;
+     //! @bug Since the devs forgot to return in case the file isn't found, the return value will be a pointer to the end
+     // of gDmaDataTable
+ }
+@@ -1759,6 +1766,8 @@ const char* DmaMgr_GetFileName(u32 vrom) {
+     return ret;
+ }
+ 
++const char *gFileName = NULL;
++
+ void DmaMgr_ProcessMsg(DmaRequest* req) {
+     u32 vrom = req->vromAddr;
+     void* ram = req->dramAddr;
+@@ -1777,7 +1786,7 @@ void DmaMgr_ProcessMsg(DmaRequest* req) {
+         // filename above this block does not match
+     }
+ 
+-    filename = DmaMgr_GetFileName(vrom);
++    filename = gFileName = DmaMgr_GetFileName(vrom);
+     iter = gDmaDataTable;
+ 
+     while (iter->vromEnd) {
+diff --git a/src/code/code_800FC620.c b/src/code/code_800FC620.c
+index 5e2532ae3..e06225aef 100644
+--- a/src/code/code_800FC620.c
++++ b/src/code/code_800FC620.c
+@@ -20,6 +20,20 @@ char D_80134488[0x18] = {
+     0xFF, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
+ };
+ 
++u32 gOverlaysLoaded = 0;
++char gOverlaysArr[59]; // 469 overlays to track
++int gNewlyLoadedOvlID = -1;
++
++u32 is_in_OvlMarkerTable(int loadedOVL) {
++    int numByteToCheck = loadedOVL / 8;
++    unsigned char bitfieldAnd = 1 << (loadedOVL % 8);
++    
++    if(gOverlaysArr[numByteToCheck] & bitfieldAnd)
++       return 1;
++    gOverlaysArr[numByteToCheck] |= bitfieldAnd; // might help if you mark it, you know.
++    return 0;
++}
++
+ s32 Overlay_Load(u32 vRomStart, u32 vRomEnd, void* vRamStart, void* vRamEnd, void* allocatedVRamAddr) {
+     s32 pad;
+     u32 end;
+@@ -45,6 +59,17 @@ s32 Overlay_Load(u32 vRomStart, u32 vRomEnd, void* vRamStart, void* vRamEnd, voi
+     end = (u32)allocatedVRamAddr + size;
+     DmaMgr_SendRequest0((u32)allocatedVRamAddr, vRomStart, size);
+ 
++    // new check
++#define BEGIN 28 // start of overlays in the DMA Table
++#define END 497 // end of overlays in the DMA table
++    // is the newly loaded OVL in the range?
++    if(gNewlyLoadedOvlID >= BEGIN && gNewlyLoadedOvlID <= END) {
++        if(!is_in_OvlMarkerTable(gNewlyLoadedOvlID - BEGIN)) {
++            gOverlaysLoaded++;
++        }
++    }
++#undef BEGIN
++#undef END
+     ovlOffset = ((s32*)end)[-1];
+ 
+     ovl = (OverlayRelocationSection*)((u32)end - ovlOffset);
+diff --git a/src/code/z_play.c b/src/code/z_play.c
+index 5d8cc785b..1b99399aa 100644
+--- a/src/code/z_play.c
++++ b/src/code/z_play.c
+@@ -1054,7 +1054,22 @@ void Gameplay_DrawOverlayElements(GlobalContext* globalCtx) {
+     }
+ }
+ 
+-#ifdef NON_MATCHING
++extern u32 gOverlaysLoaded;
++
++void Handle_DrawOverlayCount(GlobalContext* globalCtx, Gfx **gfxP)
++{
++    GfxPrint printer;
++    GfxPrint_Init(&printer);
++    GfxPrint_Open(&printer, *gfxP);
++    GfxPrint_SetPos(&printer, 3, 7);
++    GfxPrint_SetColor(&printer, 255, 255, 55, 32);
++    GfxPrint_Printf(&printer, "OVL: ");
++    GfxPrint_SetColor(&printer, 255, 255, 55, 32);
++    GfxPrint_Printf(&printer, "%03u", gOverlaysLoaded);
++    *gfxP = GfxPrint_Close(&printer);
++    GfxPrint_Destroy(&printer);
++}
++
+ // regalloc, stack usage and minor ordering differences
+ void Gameplay_Draw(GlobalContext* globalCtx) {
+     GraphicsContext* gfxCtx = globalCtx->state.gfxCtx;
+@@ -1265,7 +1280,7 @@ void Gameplay_Draw(GlobalContext* globalCtx) {
+ 
+                 if ((HREG(80) != 10) || (HREG(88) != 0)) {
+                     if (globalCtx->envCtx.unk_E6 != 0) {
+-                        func_80076934(globalCtx);
++                        func_80076934(globalCtx, globalCtx->envCtx.unk_E6);
+                     }
+                 }
+ 
+@@ -1311,11 +1326,19 @@ void Gameplay_Draw(GlobalContext* globalCtx) {
+ 
+     Camera_Finish(ACTIVE_CAM);
+ 
++    // Added debug print.
++    {
++        Gfx* prevDisplayList = POLY_OPA_DISP;
++        Gfx* gfxP = Graph_GfxPlusOne(POLY_OPA_DISP);
++        gSPDisplayList(OVERLAY_DISP++, gfxP);
++        Handle_DrawOverlayCount(globalCtx, &gfxP);
++        gSPEndDisplayList(gfxP++);
++        Graph_BranchDlist(prevDisplayList, gfxP);
++        POLY_OPA_DISP = gfxP;
++    }
++
+     CLOSE_DISPS(gfxCtx, "../z_play.c", 4508);
+ }
+-#else
+-#pragma GLOBAL_ASM("asm/non_matchings/code/z_play/Gameplay_Draw.s")
+-#endif
+ 
+ void Gameplay_Main(GameState* thisx) {
+     GlobalContext* globalCtx = (GlobalContext*)thisx;

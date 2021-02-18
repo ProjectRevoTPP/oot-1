@@ -138,7 +138,7 @@ void func_800BC88C(GlobalContext* globalCtx) {
 }
 
 Gfx* func_800BC8A0(GlobalContext* globalCtx, Gfx* gfx) {
-    Gfx_SetFog2(gfx, globalCtx->lightCtx.unk_07, globalCtx->lightCtx.unk_08, globalCtx->lightCtx.unk_09, 0,
+    return Gfx_SetFog2(gfx, globalCtx->lightCtx.unk_07, globalCtx->lightCtx.unk_08, globalCtx->lightCtx.unk_09, 0,
                 globalCtx->lightCtx.unk_0A, 1000);
 }
 
@@ -329,7 +329,6 @@ void Gameplay_Init(GameState* thisx) {
     gTrnsnUnkState = 0;
     globalCtx->transitionMode = 0;
     func_8008E6A0(&globalCtx->sub_7B8);
-    Rand_Seed((u32)osGetTime());
     Matrix_Init(&globalCtx->state);
     globalCtx->state.main = Gameplay_Main;
     globalCtx->state.destroy = Gameplay_Destroy;
@@ -1054,7 +1053,22 @@ void Gameplay_DrawOverlayElements(GlobalContext* globalCtx) {
     }
 }
 
-#ifdef NON_MATCHING
+extern u32 gOverlaysLoaded;
+
+void Handle_DrawOverlayCount(GlobalContext* globalCtx, Gfx **gfxP)
+{
+    GfxPrint printer;
+    GfxPrint_Init(&printer);
+    GfxPrint_Open(&printer, *gfxP);
+    GfxPrint_SetPos(&printer, 3, 7);
+    GfxPrint_SetColor(&printer, 255, 255, 55, 32);
+    GfxPrint_Printf(&printer, "OVL: ");
+    GfxPrint_SetColor(&printer, 255, 255, 55, 32);
+    GfxPrint_Printf(&printer, "%03u", gOverlaysLoaded);
+    *gfxP = GfxPrint_Close(&printer);
+    GfxPrint_Destroy(&printer);
+}
+
 // regalloc, stack usage and minor ordering differences
 void Gameplay_Draw(GlobalContext* globalCtx) {
     GraphicsContext* gfxCtx = globalCtx->state.gfxCtx;
@@ -1265,7 +1279,7 @@ void Gameplay_Draw(GlobalContext* globalCtx) {
 
                 if ((HREG(80) != 10) || (HREG(88) != 0)) {
                     if (globalCtx->envCtx.unk_E6 != 0) {
-                        func_80076934(globalCtx);
+                        func_80076934(globalCtx, globalCtx->envCtx.unk_E6);
                     }
                 }
 
@@ -1311,11 +1325,19 @@ void Gameplay_Draw(GlobalContext* globalCtx) {
 
     Camera_Finish(ACTIVE_CAM);
 
+    // Added debug print.
+    {
+        Gfx* prevDisplayList = POLY_OPA_DISP;
+        Gfx* gfxP = Graph_GfxPlusOne(POLY_OPA_DISP);
+        gSPDisplayList(OVERLAY_DISP++, gfxP);
+        Handle_DrawOverlayCount(globalCtx, &gfxP);
+        gSPEndDisplayList(gfxP++);
+        Graph_BranchDlist(prevDisplayList, gfxP);
+        POLY_OPA_DISP = gfxP;
+    }
+
     CLOSE_DISPS(gfxCtx, "../z_play.c", 4508);
 }
-#else
-#pragma GLOBAL_ASM("asm/non_matchings/code/z_play/Gameplay_Draw.s")
-#endif
 
 void Gameplay_Main(GameState* thisx) {
     GlobalContext* globalCtx = (GlobalContext*)thisx;

@@ -313,38 +313,33 @@ void PadMgr_HandlePreNMI(PadMgr* padMgr) {
     PadMgr_RumbleReset(padMgr);
 }
 
+extern OSMesgQueue sSiIntMsgQ;
+
+// Changes made to poll on game thread to stop TAS desyncs for testing.
 void PadMgr_RequestPadData(PadMgr* padMgr, Input* inputs, s32 mode) {
     s32 i;
-    Input* ogInput;
     Input* newInput;
     s32 buttonDiff;
+    static OSContPad gControllerPads[4];
 
-    PadMgr_LockPadData(padMgr);
+    // start the cont read
+    osContStartReadData(&sSiIntMsgQ);
 
-    ogInput = &padMgr->inputs[0];
+    osRecvMesg(&sSiIntMsgQ, NULL, OS_MESG_BLOCK); // we need to block until done
+    osContGetReadData(&gControllerPads[0]);
+
     newInput = &inputs[0];
     for (i = 0; i < 4; i++) {
-        if (mode != 0) {
-            *newInput = *ogInput;
-            ogInput->press.button = 0;
-            ogInput->press.stick_x = 0;
-            ogInput->press.stick_y = 0;
-            ogInput->rel.button = 0;
-        } else {
-            newInput->prev = newInput->cur;
-            newInput->cur = ogInput->cur;
-            buttonDiff = newInput->prev.button ^ newInput->cur.button;
-            newInput->press.button = newInput->cur.button & buttonDiff;
-            newInput->rel.button = newInput->prev.button & buttonDiff;
-            PadUtils_UpdateRelXY(newInput);
-            newInput->press.stick_x += (s8)(newInput->cur.stick_x - newInput->prev.stick_x);
-            newInput->press.stick_y += (s8)(newInput->cur.stick_y - newInput->prev.stick_y);
-        }
-        ogInput++;
+        newInput->prev = newInput->cur;
+        newInput->cur = gControllerPads[i];
+        buttonDiff = newInput->prev.button ^ newInput->cur.button;
+        newInput->press.button = newInput->cur.button & buttonDiff;
+        newInput->rel.button = newInput->prev.button & buttonDiff;
+        PadUtils_UpdateRelXY(newInput);
+        newInput->press.stick_x += (s8)(newInput->cur.stick_x - newInput->prev.stick_x);
+        newInput->press.stick_y += (s8)(newInput->cur.stick_y - newInput->prev.stick_y);
         newInput++;
     }
-
-    PadMgr_UnlockPadData(padMgr);
 }
 
 void PadMgr_ThreadEntry(PadMgr* padMgr) {

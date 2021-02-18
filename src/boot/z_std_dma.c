@@ -1729,18 +1729,25 @@ void DmaMgr_Error(DmaRequest* req, const char* file, const char* errorName, cons
     Fault_AddHungupAndCrashImpl(buff1, buff2);
 }
 
+extern int gNewlyLoadedOvlID;
+
 const char* DmaMgr_GetFileNameImpl(u32 vrom) {
     DmaEntry* iter = gDmaDataTable;
     const char** name = sDmaMgrFileNames;
+    int i = 0;
 
     while (iter->vromEnd) {
         if (vrom >= iter->vromStart && vrom < iter->vromEnd) {
+            if(i > 28) // HUH??
+                gNewlyLoadedOvlID = i;
             return *name;
         }
 
         iter++;
         name++;
+        i++;
     }
+    gNewlyLoadedOvlID = -1;
     //! @bug Since the devs forgot to return in case the file isn't found, the return value will be a pointer to the end
     // of gDmaDataTable
 }
@@ -1758,6 +1765,8 @@ const char* DmaMgr_GetFileName(u32 vrom) {
 
     return ret;
 }
+
+const char *gFileName = NULL;
 
 void DmaMgr_ProcessMsg(DmaRequest* req) {
     u32 vrom = req->vromAddr;
@@ -1777,7 +1786,7 @@ void DmaMgr_ProcessMsg(DmaRequest* req) {
         // filename above this block does not match
     }
 
-    filename = DmaMgr_GetFileName(vrom);
+    filename = gFileName = DmaMgr_GetFileName(vrom);
     iter = gDmaDataTable;
 
     while (iter->vromEnd) {

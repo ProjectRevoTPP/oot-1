@@ -4,7 +4,12 @@
 #include "z64.h"
 
 f32 fabsf(f32 f);
+// I'd rather have a define that says it's IDO but this will work for now.
+#ifdef __GNUC__
+#define fabsf __builtin_fabsf
+#else
 #pragma intrinsic(fabsf)
+#endif
 f32 sqrtf(f32 f);
 #pragma intrinsic(sqrtf)
 f64 sqrt(f64 d);
@@ -968,7 +973,7 @@ void func_80075E68(GlobalContext* globalCtx);
 // ? func_800763A8(?);
 // ? func_800766C4(?);
 void func_8007672C(GraphicsContext*, u8, u8, u8, u8, UNK_TYPE);
-void func_80076934(GlobalContext* globalCtx);
+void func_80076934(GlobalContext* globalCtx, u8 var);
 void func_800773A8(GlobalContext* globalCtx, f32 arg1, f32 arg2, f32 arg3, f32 arg4);
 s32 func_800775CC();
 void func_800775D8();
@@ -2369,7 +2374,7 @@ void func_800FBFD8(void);
 void* Overlay_AllocateAndLoad(u32 vRomStart, u32 vRomEnd, void* vRamStart, void* vRamEnd);
 void MtxConv_F2L(MatrixInternal* m1, MtxF* m2);
 void MtxConv_L2F(MtxF* m1, MatrixInternal* m2);
-void Overlay_Relocate(void* allocatedVRamAddress, OverlayRelocationSection* overlayInfo, void* vRamAddress);
+void Overlay_Relocate(u32 allocatedVRamAddr, OverlayRelocationSection* overlayInfo, u32 vRamStart);
 s32 Overlay_Load(u32 vRomStart, u32 vRomEnd, void* vRamStart, void* vRamEnd, void* allocatedVRamAddress);
 // ? func_800FC800(?);
 // ? func_800FC83C(?);

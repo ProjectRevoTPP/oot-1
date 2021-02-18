@@ -200,9 +200,6 @@ void Jpeg_ParseMarkers(u8* ptr, JpegContext* ctx) {
     }
 }
 
-#ifdef NON_MATCHING
-// the time diff isn't correct, workBuff->unk_6C0 is kept in a temp register instead of being stored in the stack and
-// regalloc differences
 s32 Jpeg_Decode(void* data, u16* zbuffer, JpegWork* workBuff, u32 workSize) {
     s32 y;
     s32 x;
@@ -342,6 +339,3 @@ s32 Jpeg_Decode(void* data, u16* zbuffer, JpegWork* workBuff, u32 workSize) {
 
     return 0;
 }
-#else
-#pragma GLOBAL_ASM("asm/non_matchings/code/z_jpeg/Jpeg_Decode.s")
-#endif

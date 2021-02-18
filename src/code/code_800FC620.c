@@ -20,6 +20,20 @@ char D_80134488[0x18] = {
     0xFF, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00,
 };
 
+u32 gOverlaysLoaded = 0;
+char gOverlaysArr[59]; // 469 overlays to track
+int gNewlyLoadedOvlID = -1;
+
+u32 is_in_OvlMarkerTable(int loadedOVL) {
+    int numByteToCheck = loadedOVL / 8;
+    unsigned char bitfieldAnd = 1 << (loadedOVL % 8);
+    
+    if(gOverlaysArr[numByteToCheck] & bitfieldAnd)
+       return 1;
+    gOverlaysArr[numByteToCheck] |= bitfieldAnd; // might help if you mark it, you know.
+    return 0;
+}
+
 s32 Overlay_Load(u32 vRomStart, u32 vRomEnd, void* vRamStart, void* vRamEnd, void* allocatedVRamAddr) {
     s32 pad;
     u32 end;
@@ -45,13 +59,24 @@ s32 Overlay_Load(u32 vRomStart, u32 vRomEnd, void* vRamStart, void* vRamEnd, voi
     end = (u32)allocatedVRamAddr + size;
     DmaMgr_SendRequest0((u32)allocatedVRamAddr, vRomStart, size);
 
+    // new check
+#define BEGIN 28 // start of overlays in the DMA Table
+#define END 497 // end of overlays in the DMA table
+    // is the newly loaded OVL in the range?
+    if(gNewlyLoadedOvlID >= BEGIN && gNewlyLoadedOvlID <= END) {
+        if(!is_in_OvlMarkerTable(gNewlyLoadedOvlID - BEGIN)) {
+            gOverlaysLoaded++;
+        }
+    }
+#undef BEGIN
+#undef END
     ovlOffset = ((s32*)end)[-1];
 
     ovl = (OverlayRelocationSection*)((u32)end - ovlOffset);
-    if (gOverlayLogSeverity >= 3) {
+    //if (gOverlayLogSeverity >= 3) {
         osSyncPrintf("TEXT(%08x), DATA(%08x), RODATA(%08x), BSS(%08x)\n", ovl->textSize, ovl->dataSize, ovl->rodataSize,
                      ovl->bssSize);
-    }
+    //}
 
     if (gOverlayLogSeverity >= 3) {
         // Relocate

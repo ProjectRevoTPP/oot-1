@@ -64,26 +64,33 @@ extern AnimationHeader D_0600C374;
 
 void EnHeishi4_Init(Actor* thisx, GlobalContext* globalCtx) {
     EnHeishi4* this = THIS;
+    osSyncPrintf("I get here 1\n");
 
     Actor_SetScale(thisx, 0.01f);
     this->type = thisx->params & 0xFF;
+    osSyncPrintf("I get here 2\n");
     thisx->colChkInfo.mass = MASS_IMMOVABLE;
     this->pos = thisx->world.pos;
     thisx->targetMode = 6;
+    osSyncPrintf("I get here 3\n");
     if (this->type == HEISHI4_AT_MARKET_DYING) {
+        osSyncPrintf("I get here 4\n");
         this->height = 30.0f;
         ActorShape_Init(&thisx->shape, 0.0f, NULL, 30.0f);
         SkelAnime_Init(globalCtx, &this->skelAnime, &D_0600BAC8, &D_0600C444, this->jointTable, this->morphTable, 17);
     } else {
+        osSyncPrintf("I get here 5\n");
         this->height = 60.0f;
         ActorShape_Init(&thisx->shape, 0.0f, ActorShadow_DrawCircle, 30.0f);
         SkelAnime_Init(globalCtx, &this->skelAnime, &D_0600BAC8, &D_06005C30, this->jointTable, this->morphTable, 17);
     }
+    osSyncPrintf("I get here 6\n");
     Collider_InitCylinder(globalCtx, &this->collider);
     Collider_SetCylinder(globalCtx, &this->collider, thisx, &sCylinderInit);
     this->collider.dim.yShift = 0;
     this->collider.dim.radius = 15;
     this->collider.dim.height = 70;
+    osSyncPrintf("I get here 7\n");
     switch (this->type) {
         case HEISHI4_AT_KAKRIKO_ENTRANCE:
         case HEISHI4_AT_IMPAS_HOUSE:
@@ -98,6 +105,7 @@ void EnHeishi4_Init(Actor* thisx, GlobalContext* globalCtx) {
             this->actionFunc = func_80A56544;
             break;
     }
+    osSyncPrintf("I get here 8\n");
     this->unk_27C = ((thisx->params >> 8) & 0xFF);
     osSyncPrintf("\n\n");
     osSyncPrintf(VT_FGCOL(GREEN) " ☆☆☆☆☆ 兵士２セット完了！ ☆☆☆☆☆ %d\n" VT_RST, thisx->params);

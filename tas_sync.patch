@@ -1,0 +1,98 @@
+diff --git a/asm/non_matchings/code/code_800EC960/func_800EDA3C.s b/asm/non_matchings/code/code_800EC960/func_800EDA3C.s
+index 727cd3e11..cbe514efc 100644
+--- a/asm/non_matchings/code/code_800EC960/func_800EDA3C.s
++++ b/asm/non_matchings/code/code_800EC960/func_800EDA3C.s
+@@ -10,7 +10,7 @@ glabel func_800EDA3C
+ /* B64BFC 800EDA5C 952E0000 */  lhu   $t6, ($t1)
+ /* B64C00 800EDA60 3C038013 */  lui   $v1, %hi(D_80130F40) # $v1, 0x8013
+ /* B64C04 800EDA64 24630F40 */  addiu $v1, %lo(D_80130F40) # addiu $v1, $v1, 0xf40
+-/* B64C08 800EDA68 15C00003 */  bnez  $t6, .L800EDA78
++/* B64C08 800EDA68 15C00003 */  nop # bnez  $t6, .L800EDA78 (TAS sync patch)
+ /* B64C0C 800EDA6C 3C0F8017 */   lui   $t7, %hi(D_8016BA04) # $t7, 0x8017
+ /* B64C10 800EDA70 10000005 */  b     .L800EDA88
+ /* B64C14 800EDA74 24040003 */   li    $a0, 3
+diff --git a/src/code/padmgr.c b/src/code/padmgr.c
+index a3e32d584..27d558549 100644
+--- a/src/code/padmgr.c
++++ b/src/code/padmgr.c
+@@ -318,38 +318,33 @@ void PadMgr_HandlePreNMI(PadMgr* padmgr) {
+     PadMgr_RumbleReset(padmgr);
+ }
+ 
++extern OSMesgQueue sSiIntMsgQ;
++
++// Changes made to poll on game thread to stop TAS desyncs for testing.
+ void PadMgr_RequestPadData(PadMgr* padmgr, Input* inputs, s32 mode) {
+     s32 i;
+-    Input* ogInput;
+     Input* newInput;
+     s32 buttonDiff;
++    static OSContPad gControllerPads[4];
+ 
+-    PadMgr_LockPadData(padmgr);
++    // start the cont read
++    osContStartReadData(&sSiIntMsgQ);
++
++    osRecvMesg(&sSiIntMsgQ, NULL, OS_MESG_BLOCK); // we need to block until done
++    osContGetReadData(&gControllerPads[0]);
+ 
+-    ogInput = &padmgr->inputs[0];
+     newInput = &inputs[0];
+     for (i = 0; i < 4; i++) {
+-        if (mode != 0) {
+-            *newInput = *ogInput;
+-            ogInput->press.button = 0;
+-            ogInput->press.stick_x = 0;
+-            ogInput->press.stick_y = 0;
+-            ogInput->rel.button = 0;
+-        } else {
+-            newInput->prev = newInput->cur;
+-            newInput->cur = ogInput->cur;
+-            buttonDiff = newInput->prev.button ^ newInput->cur.button;
+-            newInput->press.button = newInput->cur.button & buttonDiff;
+-            newInput->rel.button = newInput->prev.button & buttonDiff;
+-            PadUtils_UpdateRelXY(newInput);
+-            newInput->press.stick_x += (s8)(newInput->cur.stick_x - newInput->prev.stick_x);
+-            newInput->press.stick_y += (s8)(newInput->cur.stick_y - newInput->prev.stick_y);
+-        }
+-        ogInput++;
++        newInput->prev = newInput->cur;
++        newInput->cur = gControllerPads[i];
++        buttonDiff = newInput->prev.button ^ newInput->cur.button;
++        newInput->press.button = newInput->cur.button & buttonDiff;
++        newInput->rel.button = newInput->prev.button & buttonDiff;
++        PadUtils_UpdateRelXY(newInput);
++        newInput->press.stick_x += (s8)(newInput->cur.stick_x - newInput->prev.stick_x);
++        newInput->press.stick_y += (s8)(newInput->cur.stick_y - newInput->prev.stick_y);
+         newInput++;
+     }
+-
+-    PadMgr_UnlockPadData(padmgr);
+ }
+ 
+ void PadMgr_ThreadEntry(PadMgr* padmgr) {
+diff --git a/src/code/z_play.c b/src/code/z_play.c
+index 06a5f82d9..e300c443c 100644
+--- a/src/code/z_play.c
++++ b/src/code/z_play.c
+@@ -333,7 +333,6 @@ void Gameplay_Init(GameState* thisx) {
+     gTrnsnUnkState = 0;
+     globalCtx->transitionMode = 0;
+     func_8008E6A0(&globalCtx->sub_7B8);
+-    Rand_Seed((u32)osGetTime());
+     Matrix_Init(&globalCtx->state);
+     globalCtx->state.main = Gameplay_Main;
+     globalCtx->state.destroy = Gameplay_Destroy;
+diff --git a/src/code/z_room.c b/src/code/z_room.c
+index 4b802156d..5360da4a5 100644
+--- a/src/code/z_room.c
++++ b/src/code/z_room.c
+@@ -587,7 +587,7 @@ s32 func_8009728C(GlobalContext* globalCtx, RoomContext* roomCtx, s32 roomNum) {
+ 
+ s32 func_800973FC(GlobalContext* globalCtx, RoomContext* roomCtx) {
+     if (roomCtx->status == 1) {
+-        if (!osRecvMesg(&roomCtx->loadQueue, NULL, OS_MESG_NOBLOCK)) {
++        if (!osRecvMesg(&roomCtx->loadQueue, NULL, OS_MESG_BLOCK)) {
+             roomCtx->status = 0;
+             roomCtx->curRoom.segment = roomCtx->unk_34;
+             gSegments[3] = VIRTUAL_TO_PHYSICAL(roomCtx->unk_34);
