@@ -187,7 +187,7 @@ build/src/overlays/gamestates/%.o: CC := python3 tools/asm_processor/build.py $(
 ifeq ($(COMPILER),gcc)
   include gcc_safe_files.mk
   $(SAFE_C_FILES): CC := mips-linux-gnu-gcc
-  $(SAFE_C_FILES): CFLAGS := -c -G 0 -nostdinc -Iinclude -Isrc -Iassets -Ibuild -I. -DNON_MATCHING=1 -DNON_EQUIVALENT=1 -DAVOID_UB=1 -mno-shared -march=vr4300 -mfix4300 -mabi=32 -mhard-float -mdivide-breaks -fno-stack-protector -fno-common -fno-zero-initialized-in-bss -mno-abicalls -fno-strict-aliasing -fno-inline-functions -fno-inline-small-functions -fno-toplevel-reorder -ffreestanding -fwrapv -Wall -Wextra -g -fno-gcse -fno-cse-follow-jumps -mno-load-store-pairs -mno-explicit-relocs -fno-peephole2
+  $(SAFE_C_FILES): CFLAGS := -c -G 0 -nostdinc -Iinclude -Isrc -Iassets -Ibuild -I. -DNON_MATCHING=1 -DNON_EQUIVALENT=1 -DAVOID_UB=1 -mno-shared -march=vr4300 -mfix4300 -mabi=32 -mhard-float -mdivide-breaks -fno-stack-protector -fno-common -fno-zero-initialized-in-bss -mno-abicalls -fno-strict-aliasing -fno-inline-functions -fno-inline-small-functions -fno-toplevel-reorder -ffreestanding -fwrapv -Wall -Wextra -g -mno-explicit-relocs -mno-split-addresses
   $(SAFE_C_FILES): MIPS_VERSION := -mips3
   $(SAFE_C_FILES): OPTFLAGS := -O2
 endif
